@@ -10,19 +10,35 @@ const PORT = 3002;
 // Middleware
 app.use(cors());
 app.use(express.static('frontend')); // Sirve index.html desde /entrenarpancho
-app.use('/uploads', express.static('uploads'));
+// Servir sólo las miniaturas de imágenes
+app.use(
+  '/uploads/images',
+  express.static(path.join(__dirname, 'uploads', 'images'))
+);
+
+// (Opcional) bloquear acceso público a PDFs
+// app.use('/uploads/pdfs', (req, res) => res.status(403).send('Prohibido'));
 
 // Configurar Multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = 'uploads';
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-    cb(null, dir);
+    // Elegimos carpeta según tipo MIME
+    const subfolder = file.mimetype.startsWith('image/') ? 'images' : 'pdfs';
+    const uploadPath = path.join(__dirname, 'uploads', subfolder);
+
+    // Creamos recursivamente si no existe
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    cb(null, file.originalname); // Conserva el nombre original
+    // Conserva nombre original
+    cb(null, file.originalname);
   }
 });
+
 const upload = multer({ storage });
 
 // Endpoint para recibir archivos

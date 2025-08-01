@@ -1,0 +1,27 @@
+{
+  "name": "pancho-api",
+  "version": "1.0.0",
+"type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@langchain/core": "^0.3.66",
+    "@langchain/openai": "^0.6.3",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "langchain": "^0.3.30",
+    "multer": "^2.0.2",
+    "openai": "^5.10.2",
+    "path": "^0.12.7",
+    "pdf-parse": "^1.1.1"
+  }
+}

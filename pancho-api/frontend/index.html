@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrenar a Pancho</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-blue-100 to-purple-100 min-h-screen flex items-center justify-center px-4 relative">
+
+  <!-- Login Overlay -->
+  <div id="loginOverlay" class="absolute inset-0 bg-white/90 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
+      <h2 class="text-xl font-bold text-center text-blue-700">🔐 Acceso privado</h2>
+      <input id="username" type="text" placeholder="Usuario" class="w-full p-2 border border-gray-300 rounded" />
+      <input id="password" type="password" placeholder="Contraseña" class="w-full p-2 border border-gray-300 rounded" />
+      <button onclick="checkLogin()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
+        Ingresar
+      </button>
+      <p id="loginError" class="text-red-600 text-sm text-center hidden">Usuario o contraseña incorrectos.</p>
+    </div>
+  </div>
+
+  <!-- Contenido principal (oculto al inicio) -->
+  <div id="mainContent" class="w-full max-w-xl bg-white rounded-2xl shadow-lg p-6 space-y-6 hidden">
+    <h1 class="text-2xl md:text-3xl font-bold text-center text-blue-800">📁 Subí archivos para entrenar a Pancho</h1>
+
+    <form id="uploadForm" class="space-y-4" enctype="multipart/form-data">
+      <label class="block text-gray-700 font-semibold">Seleccioná archivos:</label>
+      <input
+        type="file"
+        id="fileInput"
+        name="files"
+        multiple
+        class="w-full p-2 border border-gray-300 rounded-lg"
+        accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png,.csv"
+      />
+      <button
+        type="submit"
+        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300"
+      >
+        Subir archivos
+      </button>
+    </form>
+
+    <div>
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">📄 Archivos ya subidos:</h2>
+      <ul id="fileList" class="space-y-1 text-sm text-gray-600">
+        <!-- Lista de archivos -->
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "/";
+
+    const USUARIO = "admin";
+    const CONTRASENA = "pancho123";
+
+    function checkLogin() {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      if (username === USUARIO && password === CONTRASENA) {
+        document.getElementById("loginOverlay").style.display = "none";
+        document.getElementById("mainContent").classList.remove("hidden");
+        cargarArchivos();
+      } else {
+        document.getElementById("loginError").classList.remove("hidden");
+      }
+    }
+
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("fileInput");
+      const formData = new FormData();
+      for (const file of input.files) {
+        formData.append("files", file);
+      }
+
+      const res = await fetch(API_URL + "upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        alert("Archivos subidos correctamente ✅");
+        cargarArchivos();
+      } else {
+        alert("Error al subir archivos ❌");
+      }
+    });
+
+    async function cargarArchivos() {
+      const fileList = document.getElementById("fileList");
+      fileList.innerHTML = "";
+      try {
+        const res = await fetch(API_URL + "archivos");
+        const archivos = await res.json();
+        archivos.forEach((nombre) => {
+          const li = document.createElement("li");
+          li.textContent = "📎 " + nombre;
+          fileList.appendChild(li);
+        });
+      } catch (err) {
+        console.error("Error cargando archivos:", err);
+      }
+    }
+  </script>
+</body>
+</html>

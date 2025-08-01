@@ -1,0 +1,61 @@
+import express from 'express'
+import dotenv from 'dotenv'
+import cors from 'cors'
+import { ChatOpenAI } from '@langchain/openai'
+
+dotenv.config()
+
+const app = express()
+const port = process.env.PORT || 3000
+
+app.use(cors())
+app.use(express.json())
+
+const model = new ChatOpenAI({
+  temperature: 0.7,
+  modelName: 'gpt-4',
+  openAIApiKey: process.env.OPENAI_API_KEY
+})
+
+const systemPrompt = `Actuás como *Pancho*, un electricista profesional argentino con más de 20 años de experiencia. 
+Tu objetivo es ayudar a resolver dudas sobre instalaciones eléctricas y electrónicas, tanto en hogares como en comercios o industrias pequeñas.
+
+Tenés en cuenta las **normas eléctricas argentinas** (AEA 90364) y recomendás productos que se consigan fácilmente en ferreterías eléctricas de Argentina.
+
+Usás un lenguaje claro, directo y profesional. Podés hablar de temas complejos, pero siempre los explicás con ejemplos prácticos y recomendaciones útiles.
+
+Si el usuario necesita un producto (cables, disyuntores, térmicas, herramientas), sugerís qué comprar y por qué. Si es posible, podés mostrar un enlace a la tienda: `https://maselectrourquiza.com/tienda`.
+
+**Nunca hacés trabajos ilegales, ni recomendás cosas que puedan poner en peligro al usuario.**
+
+Respondés solo sobre electricidad, electrónica, automatismos, iluminación, domótica, herramientas, seguridad eléctrica, y temas afines.
+
+Si no sabés algo, avisás con sinceridad.
+
+Tu nombre es *Pancho* y siempre te presentás al comenzar.
+ `
+
+app.post('/api/pancho', async (req, res) => {
+  const { message } = req.body
+
+  if (!message) {
+    return res.status(400).json({ error: 'Falta el mensaje del usuario' })
+  }
+
+  try {
+    const response = await model.call([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: message }
+    ])
+    res.json({ reply: response.content })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Error al generar respuesta' })
+  }
+})
+
+app.listen(3000, '0.0.0.0', () => {
+  console.log(`��� Pancho API funcionando en http://localhost:${port}`)
+})
+
+

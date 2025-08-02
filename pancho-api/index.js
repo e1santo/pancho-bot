@@ -61,16 +61,13 @@ const cargarContenidoUploads = async () => {
         contenido += `\n[📄 Contenido de "${file}"]\n${parsed.text}\n`;
       }
     }
- } catch (err) {
-    // Línea existente, déjala:
+  } catch (err) {
     console.error('Error al generar respuesta:', err);
-    // Líneas nuevas, añádelas justo después:
-    console.error('Detalle completo del error:', JSON.stringify(
-      err,
-      Object.getOwnPropertyNames(err),
-      2
-    ));
-    res.status(500).json({ error: 'Error al generar respuesta' })
+    console.error(
+      'Detalle completo del error:',
+      JSON.stringify(err, Object.getOwnPropertyNames(err), 2)
+    );
+    res.status(500).json({ error: 'Error al generar respuesta' });
   }
 
   // 2) Leer imágenes

@@ -180,22 +180,39 @@ app.post('/api/pancho', async (req, res) => {
         ? `Podría ayudarte con estos videos:`
         : `No encontré videos relacionados.`
     } else {
-      // GPT-4 + retrieval de knowledge
-      const chunks = await retrieveKnowledge(message, 5)
-      const prompt = `
+  // Si hay información en knowledge.json, la usamos como contexto
+  const chunks = await retrieveKnowledge(message, 5)
+
+  if (chunks.length) {
+    // Generamos un prompt que incluya solo el primer resumen
+    const prompt = `
 ${systemPrompt}
 
-He extraído esta información de mis manuales:
-${chunks.join('\n')}
+Usá esta información de mis manuales para responder de forma clara y conversacional:
+${chunks[0]}
 
 Usuario: ${message}
-`
-      const gptRes = await model.call([
-        { role: 'system', content: prompt },
-        { role: 'user',   content: message }
-      ])
-      output.text = gptRes.content
+    `
+    const gptRes = await model.call([
+      { role: 'system', content: prompt },
+      { role: 'user',   content: message }
+    ])
+    output.text = gptRes.content
+  } else {
+    // Si no hay datos en knowledge.json, consulta directa a GPT-4
+    const prompt = `
+${systemPrompt}
+
+Usuario: ${message}
+    `
+    const gptRes = await model.call([
+      { role: 'system', content: prompt },
+      { role: 'user',   content: message }
+    ])
+    output.text = gptRes.content
+  }
     }
+
 
     return res.json(output)
 

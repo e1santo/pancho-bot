@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Pancho Trainer</title></head>
+<body>
+  <h1>Sube tus archivos para entrenar a Pancho</h1>
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <p>PDFs: <input type="file" name="pdfs" multiple accept=".pdf"></p>
+    <p>Imágenes: <input type="file" name="images" multiple accept="image/*"></p>
+    <p>Videos (links): <input type="text" name="videos" placeholder="URLs separadas por coma"></p>
+    <p>Catálogo (Excel): <input type="file" name="excel" accept=".xlsx,.csv"></p>
+    <button type="submit">Enviar</button>
+  </form>
+</body>
+</html>

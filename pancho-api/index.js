@@ -112,19 +112,21 @@ function retrieveImages(query) {
 }
 
 
-// Búsqueda de videos mejorada
+// Búsqueda de videos mejorada con coincidencia por palabra
 function retrieveVideos(query) {
   const text = query.toLowerCase();
 
   return videos
     .filter(v => {
-      const q = v.query.toLowerCase();
-      // Coincide si la consulta del usuario incluye la etiqueta del video
-      return text.includes(q);
+      // Dividimos la propiedad 'query' en palabras clave
+      const keywords = v.query.toLowerCase().split(/\s+/);
+      // Devolvemos true si alguna palabra clave está en la consulta del usuario
+      return keywords.some(kw => text.includes(kw));
     })
     .slice(0, 5)
     .map(v => v.url);
 }
+
 
 
 // Detección de intención básica

@@ -112,15 +112,20 @@ function retrieveImages(query) {
 }
 
 
-// Búsqueda de videos
+// Búsqueda de videos mejorada
 function retrieveVideos(query) {
+  const text = query.toLowerCase();
+
   return videos
-    .filter(v =>
-      v.query.toLowerCase().includes(query)
-    )
+    .filter(v => {
+      const q = v.query.toLowerCase();
+      // Coincide si la consulta del usuario incluye la etiqueta del video
+      return text.includes(q);
+    })
     .slice(0, 5)
-    .map(v => v.url)
+    .map(v => v.url);
 }
+
 
 // Detección de intención básica
 function detectIntent(text) {

@@ -46,13 +46,27 @@ app.post('/upload', upload.array('files'), (req, res) => {
   res.json({ message: 'Archivos subidos correctamente' });
 });
 
-// Endpoint para listar archivos subidos
+// Endpoint para listar archivos subidos por tipo
 app.get('/archivos', (req, res) => {
-  fs.readdir('uploads', (err, files) => {
-    if (err) return res.status(500).send('Error leyendo archivos');
-    res.json(files);
+  const base = path.join(__dirname, 'uploads');
+
+  // Leer imágenes
+  fs.readdir(path.join(base, 'images'), (errImg, images) => {
+    if (errImg) return res.status(500).send('Error leyendo imágenes');
+
+    // Leer PDFs
+    fs.readdir(path.join(base, 'pdfs'), (errPdf, pdfs) => {
+      if (errPdf) return res.status(500).send('Error leyendo PDFs');
+
+      // Enviar lista combinada o por separado
+      res.json({
+        images,
+        pdfs
+      });
+    });
   });
 });
+
 
 // Iniciar servidor
 app.listen(PORT, () => {

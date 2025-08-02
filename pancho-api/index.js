@@ -12,6 +12,9 @@ const __dirname = dirname(__filename);
 
 
 dotenv.config()
+// DEBUG: verificar que cargó la clave
+console.log('DEBUG 🔑 OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'OK' : 'No encontrada');
+
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -58,8 +61,16 @@ const cargarContenidoUploads = async () => {
         contenido += `\n[📄 Contenido de "${file}"]\n${parsed.text}\n`;
       }
     }
-  } catch (err) {
-    console.error('Error leyendo PDFs en uploads/pdfs:', err);
+ } catch (err) {
+    // Línea existente, déjala:
+    console.error('Error al generar respuesta:', err);
+    // Líneas nuevas, añádelas justo después:
+    console.error('Detalle completo del error:', JSON.stringify(
+      err,
+      Object.getOwnPropertyNames(err),
+      2
+    ));
+    res.status(500).json({ error: 'Error al generar respuesta' })
   }
 
   // 2) Leer imágenes

@@ -19,8 +19,15 @@ const port = process.env.PORT || 3000
 app.use(cors())
 app.use(express.json())
 
-// RUTA ESTÁTICA PARA IMÁGENES
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+// Servir sólo miniaturas de imágenes
+app.use(
+  '/uploads/images',
+  express.static(path.join(__dirname, 'uploads', 'images'))
+);
+
+// (Opcional) bloquear acceso público a PDFs
+// app.use('/uploads/pdfs', (req, res) => res.status(403).send('Prohibido'));
+
 
 const model = new ChatOpenAI({
   temperature: 0.7,
@@ -34,33 +41,44 @@ Actuás como *Pancho*, un electricista profesional argentino con más de 20 año
 
 // --- Cargar contenido de archivos ---
 const cargarContenidoUploads = async () => {
-  const uploadsPath = path.resolve('./uploads')
-  let contenido = ''
-  let imagenesHtml = ''
+  const pdfDir = path.join(__dirname, 'uploads', 'pdfs');
+  const imgDir = path.join(__dirname, 'uploads', 'images');
 
+  let contenido = '';
+  let imagenesHtml = '';
+
+  // 1) Leer PDFs
   try {
-    const archivos = fs.readdirSync(uploadsPath)
-
-    for (const archivo of archivos) {
-      const ruta = path.join(uploadsPath, archivo)
-
-      if (archivo.endsWith('.pdf')) {
-        const dataBuffer = fs.readFileSync(ruta)
-        const pdf = await pdfParse(dataBuffer)
-        console.log(`📄 PDF leído: ${archivo}`)
-        contenido += `\n[📄 Contenido de "${archivo}"]\n${pdf.text}\n`
-      } else if (archivo.match(/\.(jpg|jpeg|png)$/i)) {
-        const url = `https://api.maselectrourquiza.com/uploads/${archivo}`
-        console.log(`🖼️ Imagen detectada: ${archivo}`)
-        imagenesHtml += `<p><strong>${archivo}:</strong><br><a href="${url}" target="_blank"><img src="${url}" alt="${archivo}" width="200" /></a></p>\n`
+    const pdfFiles = await fs.promises.readdir(pdfDir);
+    for (const file of pdfFiles) {
+      if (file.endsWith('.pdf')) {
+        const dataBuffer = await fs.promises.readFile(path.join(pdfDir, file));
+        const parsed = await pdfParse(dataBuffer);
+        console.log(`📄 PDF leído: ${file}`);
+        contenido += `\n[📄 Contenido de "${file}"]\n${parsed.text}\n`;
       }
     }
   } catch (err) {
-    console.error('Error leyendo archivos en /uploads:', err)
+    console.error('Error leyendo PDFs en uploads/pdfs:', err);
   }
 
-  return `${contenido}\n\n📷 Imágenes disponibles:\n${imagenesHtml}`
-}
+  // 2) Leer imágenes
+  try {
+    const imgFiles = await fs.promises.readdir(imgDir);
+    for (const file of imgFiles) {
+      if (file.match(/\.(jpg|jpeg|png)$/i)) {
+        const url = `https://api.maselectrourquiza.com/uploads/images/${file}`;
+        console.log(`🖼️ Imagen detectada: ${file}`);
+        imagenesHtml += `<p><strong>${file}:</strong><br><a href="${url}" target="_blank"><img src="${url}" alt="${file}" width="200" /></a></p>\n`;
+      }
+    }
+  } catch (err) {
+    console.error('Error leyendo imágenes en uploads/images:', err);
+  }
+
+  return `${contenido}\n\n📷 Imágenes disponibles:\n${imagenesHtml}`;
+};
+
 
 // --- Ruta principal del chatbot ---
 app.post('/api/pancho', async (req, res) => {

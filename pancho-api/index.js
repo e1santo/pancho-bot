@@ -3,99 +3,171 @@ import dotenv from 'dotenv'
 import cors from 'cors'
 import fs from 'fs'
 import path from 'path'
-import pdfParse from 'pdf-parse'
 import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai'
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import embeddingsIndex from './embeddings.json' assert { type: 'json' };
-import { cosineSimilarity } from 'langchain/dist/util/math'; // para calcular similitud
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Manifests JSON
+import knowledge from './knowledge.json'  assert { type: 'json' }
+import products  from './products.json'   assert { type: 'json' }
+import images    from './images.json'     assert { type: 'json' }
+import videos    from './videos.json'     assert { type: 'json' }
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname  = dirname(__filename)
 
 dotenv.config()
-// DEBUG: verificar que cargó la clave
-console.log('DEBUG 🔑 OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'OK' : 'No encontrada');
 
+// DEBUG: clave cargada
+console.log('DEBUG 🔑 OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'OK' : 'No encontrada')
 
-const app = express()
+const app  = express()
 const port = process.env.PORT || 3000
 
 app.use(cors())
 app.use(express.json())
 
-// Servir sólo miniaturas de imágenes
+// Sirve miniaturas de imágenes
 app.use(
   '/uploads/images',
   express.static(path.join(__dirname, 'uploads', 'images'))
-);
+)
 
-// (Opcional) bloquear acceso público a PDFs
-// app.use('/uploads/pdfs', (req, res) => res.status(403).send('Prohibido'));
-
-
+// LLM y embeddings
 const model = new ChatOpenAI({
   temperature: 0.7,
-  modelName: 'gpt-4',
+  modelName:  'gpt-4',
   openAIApiKey: process.env.OPENAI_API_KEY
 })
+const embeddings = new OpenAIEmbeddings()
 
-// --- PROMPT BASE ---
-const systemPrompt = `
-Actuás como *Pancho*, un electricista profesional argentino con más de 20 años de experiencia. [...]`
-
-// --- Cargar contenido de archivos ---
-// --- Recuperar chunks relevantes ---
-async function retrieveRelevantChunks(question, topK = 5) {
-  // 1) Embed la pregunta
-  const queryVec = await new OpenAIEmbeddings().embedQuery(question);
-
-  // 2) Calcular similitudes
-  const sims = embeddingsIndex.map(item => ({
-    ...item,
-    score: cosineSimilarity(queryVec, item.vector)
-  }));
-
-  // 3) Ordenar de mayor a menor y tomar topK
-  const top = sims
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK);
-
-  // 4) Retornar solo el texto de los chunks
-  return top.map(item => `[${item.source}] ${item.chunk}`);
+// Similitud coseno
+function cosineSimilarity(a, b) {
+  const dot  = a.reduce((s, ai, i) => s + ai * b[i], 0)
+  const magA = Math.sqrt(a.reduce((s, ai) => s + ai * ai, 0))
+  const magB = Math.sqrt(b.reduce((s, bi) => s + bi * bi, 0))
+  return magA && magB ? dot / (magA * magB) : 0
 }
 
+// Retrieval de knowledge.json
+async function retrieveKnowledge(question, topK = 5) {
+  const qVec = await embeddings.embedQuery(question)
+  const sims = knowledge.map(item => ({
+    ...item,
+    score: cosineSimilarity(qVec, item.vector)
+  }))
+  return sims
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map(item => `• [${item.source}] ${item.summary}`)
+}
 
+// Búsqueda de productos
+function retrieveProducts(query) {
+  return products
+    .filter(p =>
+      p.name.toLowerCase().includes(query) ||
+      (p.tags || []).some(t => t.toLowerCase().includes(query))
+    )
+    .slice(0, 5)
+    .map(p => ({ name: p.name, url: p.url, price: p.price }))
+}
 
+// Búsqueda de imágenes
+function retrieveImages(query) {
+  return images
+    .filter(i =>
+      i.filename.toLowerCase().includes(query) ||
+      (i.tags || []).some(t => t.toLowerCase().includes(query))
+    )
+    .slice(0, 5)
+    .map(i => `http://localhost:${port}/uploads/images/${i.filename}`)
+}
 
+// Búsqueda de videos
+function retrieveVideos(query) {
+  return videos
+    .filter(v =>
+      v.query.toLowerCase().includes(query)
+    )
+    .slice(0, 5)
+    .map(v => v.url)
+}
 
-// --- Ruta principal del chatbot ---
+// Detección de intención básica
+function detectIntent(text) {
+  const t = text.toLowerCase()
+  if (/\b(comprar|precio|recomiendas)\b/.test(t)) return 'product'
+  if (/\b(video|tutorial|ver en video)\b/.test(t)) return 'video'
+  if (/\b(imagen|foto|ver esquema)\b/.test(t)) return 'image'
+  return 'chat'  // fallback a GPT + knowledge
+}
+
+// Prompt base
+const systemPrompt = `
+Actuás como *Pancho*, un electricista profesional argentino con más de 20 años de experiencia.
+Responde de forma clara, amigable y profesional.
+`
+
 app.post('/api/pancho', async (req, res) => {
   const { message } = req.body
-
   if (!message) return res.status(400).json({ error: 'Falta el mensaje del usuario' })
 
+  const intent = detectIntent(message)
+
+  // Respuesta estructurada
+  const output = {
+    text: '',
+    products: [],
+    images: [],
+    videos: []
+  }
+
   try {
-    const retrievedChunks = await retrieveRelevantChunks(message, 5)
-    const promptConArchivos = `
+    if (intent === 'product') {
+      // Recomendar producto
+      output.products = retrieveProducts(message)
+      output.text = output.products.length
+        ? `Te recomiendo estos productos:`
+        : `No encontré productos relacionados.`
+    } else if (intent === 'image') {
+      // Mostrar imágenes
+      output.images = retrieveImages(message)
+      output.text = output.images.length
+        ? `Te paso estas imágenes:`
+        : `No encontré imágenes relacionadas.`
+    } else if (intent === 'video') {
+      // Enlazar videos
+      output.videos = retrieveVideos(message)
+      output.text = output.videos.length
+        ? `Podría ayudarte con estos videos:`
+        : `No encontré videos relacionados.`
+    } else {
+      // GPT-4 + retrieval de knowledge
+      const chunks = await retrieveKnowledge(message, 5)
+      const prompt = `
 ${systemPrompt}
 
-📂 Contexto relevante extraído de documentos:
-${retrievedChunks.join('\n\n')}
-    `
+He extraído esta información de mis manuales:
+${chunks.join('\n')}
 
-    const response = await model.call([
-      { role: 'system', content: promptConArchivos },
-      { role: 'user', content: message }
-    ])
+Usuario: ${message}
+`
+      const gptRes = await model.call([
+        { role: 'system', content: prompt },
+        { role: 'user',   content: message }
+      ])
+      output.text = gptRes.content
+    }
 
-    res.json({ reply: response.content })
+    return res.json(output)
+
   } catch (err) {
-    // ...
+    console.error('Error en /api/pancho:', err)
+    return res.status(500).json({ error: 'Error interno del servidor' })
   }
 })
 
-app.listen(3000, '0.0.0.0', () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`🚀 Pancho API funcionando en http://localhost:${port}`)
 })

@@ -62,15 +62,30 @@ async function retrieveKnowledge(question, topK = 5) {
     .map(item => `• [${item.source}] ${item.summary}`)
 }
 
-// Búsqueda de productos
+// Búsqueda de productos mejorada
 function retrieveProducts(query) {
+  const text = query.toLowerCase()
+
   return products
-    .filter(p =>
-      p.name.toLowerCase().includes(query) ||
-      (p.tags || []).some(t => t.toLowerCase().includes(query))
-    )
+    .filter(p => {
+      // 1) Coincidencia por tag
+      const matchTag = (p.tags || []).some(tag =>
+        text.includes(tag.toLowerCase())
+      )
+      // 2) Coincidencia por palabra del nombre
+      const matchNameWord = p.name
+        .toLowerCase()
+        .split(/\s+/)
+        .some(word => text.includes(word))
+
+      return matchTag || matchNameWord
+    })
     .slice(0, 5)
-    .map(p => ({ name: p.name, url: p.url, price: p.price }))
+    .map(p => ({
+      name:  p.name,
+      url:   p.url,
+      price: p.price
+    }))
 }
 
 // Búsqueda de imágenes
@@ -99,9 +114,11 @@ function detectIntent(text) {
   const t = text.toLowerCase()
   if (/\b(comprar|precio|recomiendas)\b/.test(t)) return 'product'
   if (/\b(video|tutorial|ver en video)\b/.test(t)) return 'video'
-  if (/\b(imagen|foto|ver esquema)\b/.test(t)) return 'image'
-  return 'chat'  // fallback a GPT + knowledge
+  // Ahora incluimos 'diagrama' como intención de imagen
+  if (/\b(imagen|foto|ver esquema|diagrama)\b/.test(t)) return 'image'
+  return 'chat'
 }
+
 
 // Prompt base
 const systemPrompt = `

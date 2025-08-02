@@ -7,6 +7,9 @@ import pdfParse from 'pdf-parse'
 import { ChatOpenAI } from '@langchain/openai'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import embeddingsIndex from './embeddings.json' assert { type: 'json' };
+import { cosineSimilarity } from 'langchain/dist/util/math'; // para calcular similitud
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -43,6 +46,27 @@ const systemPrompt = `
 Actuás como *Pancho*, un electricista profesional argentino con más de 20 años de experiencia. [...]`
 
 // --- Cargar contenido de archivos ---
+// --- Recuperar chunks relevantes ---
+async function retrieveRelevantChunks(question, topK = 5) {
+  // 1) Embed la pregunta
+  const queryVec = await new OpenAIEmbeddings().embedQuery(question);
+
+  // 2) Calcular similitudes
+  const sims = embeddingsIndex.map(item => ({
+    ...item,
+    score: cosineSimilarity(queryVec, item.vector)
+  }));
+
+  // 3) Ordenar de mayor a menor y tomar topK
+  const top = sims
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+
+  // 4) Retornar solo el texto de los chunks
+  return top.map(item => `[${item.source}] ${item.chunk}`);
+}
+
+
 const cargarContenidoUploads = async () => {
   const pdfDir = path.join(__dirname, 'uploads', 'pdfs');
   const imgDir = path.join(__dirname, 'uploads', 'images');
@@ -95,8 +119,13 @@ app.post('/api/pancho', async (req, res) => {
   if (!message) return res.status(400).json({ error: 'Falta el mensaje del usuario' })
 
   try {
-    const contexto = await cargarContenidoUploads()
-    const promptConArchivos = `${systemPrompt}\n\n---\n📂 Archivos de referencia:\n${contexto}`
+    const retrievedChunks = await retrieveRelevantChunks(message, 5)
+    const promptConArchivos = `
+${systemPrompt}
+
+📂 Contexto relevante extraído de documentos:
+${retrievedChunks.join('\n\n')}
+    `
 
     const response = await model.call([
       { role: 'system', content: promptConArchivos },
@@ -105,8 +134,7 @@ app.post('/api/pancho', async (req, res) => {
 
     res.json({ reply: response.content })
   } catch (err) {
-    console.error('Error al generar respuesta:', err)
-    res.status(500).json({ error: 'Error al generar respuesta' })
+    // ...
   }
 })
 

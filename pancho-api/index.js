@@ -4,7 +4,7 @@ import cors from 'cors'
 import fs from 'fs'
 import path from 'path'
 import pdfParse from 'pdf-parse'
-import { ChatOpenAI } from '@langchain/openai'
+import { ChatOpenAI, OpenAIEmbeddings } from '@langchain/openai'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import embeddingsIndex from './embeddings.json' assert { type: 'json' };
@@ -67,49 +67,7 @@ async function retrieveRelevantChunks(question, topK = 5) {
 }
 
 
-const cargarContenidoUploads = async () => {
-  const pdfDir = path.join(__dirname, 'uploads', 'pdfs');
-  const imgDir = path.join(__dirname, 'uploads', 'images');
 
-  let contenido = '';
-  let imagenesHtml = '';
-
-  // 1) Leer PDFs
-  try {
-    const pdfFiles = await fs.promises.readdir(pdfDir);
-    for (const file of pdfFiles) {
-      if (file.endsWith('.pdf')) {
-        const dataBuffer = await fs.promises.readFile(path.join(pdfDir, file));
-        const parsed = await pdfParse(dataBuffer);
-        console.log(`📄 PDF leído: ${file}`);
-        contenido += `\n[📄 Contenido de "${file}"]\n${parsed.text}\n`;
-      }
-    }
-  } catch (err) {
-    console.error('Error al generar respuesta:', err);
-    console.error(
-      'Detalle completo del error:',
-      JSON.stringify(err, Object.getOwnPropertyNames(err), 2)
-    );
-    res.status(500).json({ error: 'Error al generar respuesta' });
-  }
-
-  // 2) Leer imágenes
-  try {
-    const imgFiles = await fs.promises.readdir(imgDir);
-    for (const file of imgFiles) {
-      if (file.match(/\.(jpg|jpeg|png)$/i)) {
-        const url = `https://api.maselectrourquiza.com/uploads/images/${file}`;
-        console.log(`🖼️ Imagen detectada: ${file}`);
-        imagenesHtml += `<p><strong>${file}:</strong><br><a href="${url}" target="_blank"><img src="${url}" alt="${file}" width="200" /></a></p>\n`;
-      }
-    }
-  } catch (err) {
-    console.error('Error leyendo imágenes en uploads/images:', err);
-  }
-
-  return `${contenido}\n\n📷 Imágenes disponibles:\n${imagenesHtml}`;
-};
 
 
 // --- Ruta principal del chatbot ---

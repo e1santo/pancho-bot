@@ -89,15 +89,28 @@ function retrieveProducts(query) {
 }
 
 // Búsqueda de imágenes
+// Búsqueda de imágenes mejorada
 function retrieveImages(query) {
+  const text = query.toLowerCase();
+
   return images
-    .filter(i =>
-      i.filename.toLowerCase().includes(query) ||
-      (i.tags || []).some(t => t.toLowerCase().includes(query))
-    )
+    .filter(i => {
+      // 1) Coincidencia por tag
+      const matchTag = (i.tags || []).some(tag =>
+        text.includes(tag.toLowerCase())
+      );
+      // 2) Coincidencia por nombre de archivo (sin extensión)
+      const name = i.filename.toLowerCase().replace(/\.[^.]+$/, '');
+      const matchName = name
+        .split(/[\s_-]+/)
+        .some(part => text.includes(part));
+
+      return matchTag || matchName;
+    })
     .slice(0, 5)
-    .map(i => `http://localhost:${port}/uploads/images/${i.filename}`)
+    .map(i => `http://localhost:${port}/uploads/images/${i.filename}`);
 }
+
 
 // Búsqueda de videos
 function retrieveVideos(query) {

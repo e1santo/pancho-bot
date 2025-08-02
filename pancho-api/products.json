@@ -1,0 +1,13 @@
+[ {
+    "name": "Destornillador inalámbrico Modelo X100",
+    "url": "https://tu-tienda.com/productos/x100",
+    "price": "$12 345",
+    "tags": ["destornillador", "inalámbrico", "herramienta"]
+  },
+  {
+    "name": "Taladro percutor TD-200",
+    "url": "https://tu-tienda.com/productos/td200",
+    "price": "$23 450",
+    "tags": ["taladro", "percutor", "herramienta"]
+  }
+]

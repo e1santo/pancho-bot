@@ -46,6 +46,18 @@ router.get('/:type/:id', async (req, res) => {
   }
 })
 
+function showMetadataForms(type, result) {
+  if (!result) return
+  // para videos:
+  const items = type === 'videos'
+    ? (result.videos || [])
+    : (result.files?.[type] || [])
+
+  if (!items.length) return
+  // …generar formularios…
+}
+
+
 // PUT actualizar metadata de un ítem
 router.put('/:type/:id', express.json(), async (req, res) => {
   const { type, id } = req.params

@@ -1,14 +1,119 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Pancho Trainer</title></head>
-<body>
-  <h1>Sube tus archivos para entrenar a Pancho</h1>
-  <form action="/upload" method="post" enctype="multipart/form-data">
-    <p>PDFs: <input type="file" name="pdfs" multiple accept=".pdf"></p>
-    <p>Imágenes: <input type="file" name="images" multiple accept="image/*"></p>
-    <p>Videos (links): <input type="text" name="videos" placeholder="URLs separadas por coma"></p>
-    <p>Catálogo (Excel): <input type="file" name="excel" accept=".xlsx,.csv"></p>
-    <button type="submit">Enviar</button>
-  </form>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pancho Trainer</title>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <div class="max-w-4xl mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold mb-8 text-center">Pancho Trainer</h1>
+    
+    <!-- Pestañas -->
+    <div class="mb-6 border-b border-gray-200">
+      <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+        <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm text-blue-600 border-blue-600" data-tab="pdfs">PDFs</button>
+        <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="images">Imágenes</button>
+        <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="videos">Videos</button>
+        <button class="tab-btn py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="excel">Excel</button>
+      </nav>
+    </div>
+
+    <!-- Contenedores de contenido -->
+
+    <!-- PDFs -->
+    <div id="content-pdfs" class="tab-content">
+      <form id="form-pdfs" action="/api/upload" method="post" enctype="multipart/form-data" class="space-y-4">
+        <div>
+          <label for="pdfs" class="block text-sm font-medium mb-1">Seleccionar PDFs</label>
+          <input type="file" name="pdfs" id="pdfs" multiple accept=".pdf" class="block w-full text-sm border rounded p-2">
+        </div>
+        <button type="submit" class="block w-full py-2 bg-blue-600 text-white rounded">Subir PDFs</button>
+      </form>
+    </div>
+
+    <!-- Imágenes -->
+    <div id="content-images" class="tab-content hidden">
+      <form id="form-images" action="/api/upload" method="post" enctype="multipart/form-data" class="space-y-4">
+        <div>
+          <label for="images" class="block text-sm font-medium mb-1">Seleccionar Imágenes</label>
+          <input type="file" name="images" id="images" multiple accept="image/*" class="block w-full text-sm border rounded p-2">
+        </div>
+        <div>
+          <label for="img-title" class="block text-sm font-medium mb-1">Título</label>
+          <input type="text" name="title" id="img-title" placeholder="Título descriptivo" class="block w-full text-sm border rounded p-2" required>
+        </div>
+        <div>
+          <label for="img-desc" class="block text-sm font-medium mb-1">Descripción</label>
+          <textarea name="description" id="img-desc" rows="2" placeholder="Descripción breve" class="block w-full text-sm border rounded p-2" required></textarea>
+        </div>
+        <div>
+          <label for="img-tags" class="block text-sm font-medium mb-1">Tags (separados por coma)</label>
+          <input type="text" name="tags" id="img-tags" placeholder="motor,esquema,..." class="block w-full text-sm border rounded p-2">
+        </div>
+        <button type="submit" class="block w-full py-2 bg-green-600 text-white rounded">Subir Imágenes</button>
+      </form>
+    </div>
+
+    <!-- Videos -->
+    <div id="content-videos" class="tab-content hidden">
+      <form id="form-videos" action="/api/upload" method="post" class="space-y-4">
+        <div>
+          <label for="videos" class="block text-sm font-medium mb-1">Links de YouTube</label>
+          <input type="text" name="videos" id="videos" placeholder="URL1, URL2, ..." class="block w-full text-sm border rounded p-2" required>
+        </div>
+        <div>
+          <label for="vid-title" class="block text-sm font-medium mb-1">Título</label>
+          <input type="text" name="title" id="vid-title" placeholder="Título descriptivo" class="block w-full text-sm border rounded p-2" required>
+        </div>
+        <div>
+          <label for="vid-desc" class="block text-sm font-medium mb-1">Descripción</label>
+          <textarea name="description" id="vid-desc" rows="2" placeholder="Descripción breve" class="block w-full text-sm border rounded p-2" required></textarea>
+        </div>
+        <div>
+          <label for="vid-tags" class="block text-sm font-medium mb-1">Tags (separados por coma)</label>
+          <input type="text" name="tags" id="vid-tags" placeholder="tutorial,electricidad,..." class="block w-full text-sm border rounded p-2">
+        </div>
+        <button type="submit" class="block w-full py-2 bg-indigo-600 text-white rounded">Agregar Videos</button>
+      </form>
+    </div>
+
+    <!-- Excel -->
+    <div id="content-excel" class="tab-content hidden">
+      <form id="form-excel" action="/api/upload" method="post" enctype="multipart/form-data" class="space-y-4">
+        <div>
+          <label for="excel" class="block text-sm font-medium mb-1">Subir Catálogo (Excel/CSV)</label>
+          <input type="file" name="excel" id="excel" accept=".xlsx,.csv" class="block w-full text-sm border rounded p-2" required>
+        </div>
+        <button type="submit" class="block w-full py-2 bg-yellow-600 text-white rounded">Subir Catálogo</button>
+      </form>
+    </div>
+
+    <!-- Sección de listado de archivos -->
+    <div id="file-list" class="mt-10">
+      <h2 class="text-xl font-semibold mb-4">Archivos subidos</h2>
+      <div id="lists" class="space-y-6"></div>
+    </div>
+  </div>
+
+  <!-- Lógica de pestañas -->
+  <script>
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.replace('border-blue-600','border-transparent')
+          b.classList.replace('text-blue-600','text-gray-500')
+        })
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'))
+        btn.classList.replace('text-gray-500','text-blue-600')
+        btn.classList.replace('border-transparent','border-blue-600')
+        document.getElementById('content-'+btn.dataset.tab).classList.remove('hidden')
+      })
+    })
+    document.querySelector('.tab-btn[data-tab="pdfs"]').click()
+  </script>
+  <script src="/assets/app.js"></script>
 </body>
 </html>

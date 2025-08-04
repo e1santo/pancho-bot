@@ -8,7 +8,13 @@ import { dirname } from 'path'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname  = dirname(__filename)
 const router     = express.Router()
-
+// Mapear carpetas
+const folders = {
+  pdfs:   'pdfs',
+  images: 'images',
+  videos: 'videos',
+  excel:  'excel'
+}
 // Mapear tipo a manifest
 const manifests = {
   pdfs:   path.join(__dirname, '../manifests/knowledge.json'),
@@ -38,31 +44,37 @@ router.get('/:type', async (req, res) => {
 
 // DELETE /api/files/:type/:filename
 // Elimina el fichero y sincroniza el manifest
+
+
+  // Borrar (y sincronizar manifest)
 router.delete('/:type/:filename', async (req, res) => {
   const { type, filename } = req.params
-  const uploadsDir = path.join(__dirname, '../../uploads', type)
+  const folder = folders[type] || ''
+  const manifestPath = manifests[type]
 
   try {
-    // 1) Eliminar fichero físico
-    await fs.unlink(path.join(uploadsDir, filename))
+    // 1) Si es video, NO borramos archivo físico, solo manifest
+    if (type === 'videos') {
+      const arr = JSON.parse(await fs.readFile(manifestPath, 'utf-8') || '[]')
+      const clean = arr.filter(item => item.url !== filename)
+      await fs.writeFile(manifestPath, JSON.stringify(clean, null, 2), 'utf-8')
+      return res.json({ deleted: filename })
+    }
 
-    // 2) Actualizar manifest
-    const mpath = manifests[type]
-    if (mpath) {
-      const raw = await fs.readFile(mpath, 'utf-8')
-      const arr = JSON.parse(raw || '[]')
-      const filtered = arr.filter(item => {
-        // Para imágenes
+    // 2) Para los demás tipos, borramos archivo físico…
+    const filePath = path.join(__dirname, '../../uploads', folder, filename)
+    await fs.unlink(filePath)
+
+    // …y luego limpiamos el manifest correspondiente
+    if (manifestPath) {
+      const arr = JSON.parse(await fs.readFile(manifestPath, 'utf-8') || '[]')
+      const clean = arr.filter(item => {
         if (type === 'images') return item.filename !== filename
-        // Para PDFs
         if (type === 'pdfs')   return item.source   !== filename
-        // Para videos
-        if (type === 'videos') return item.url      !== filename
-        // Para Excel/catalog
         if (type === 'excel')  return item.filename !== filename
         return true
       })
-      await fs.writeFile(mpath, JSON.stringify(filtered, null, 2))
+      await fs.writeFile(manifestPath, JSON.stringify(clean, null, 2), 'utf-8')
     }
 
     return res.json({ deleted: filename })

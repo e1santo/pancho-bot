@@ -1,1 +1,25 @@
-[]
+[
+  {
+    "filename": "1754266467811_Conexion_estrella_triangulo.jpg",
+    "title": "estrella triangulo",
+    "description": "esquema de coneccion estrella triangulo",
+    "tags": [
+      "motor",
+      "esquema. estrella triangulo"
+    ],
+    "sourcePdf": "",
+    "page": null
+  },
+  {
+    "filename": "1754266708683_logo isla.png",
+    "title": "Logo Isla",
+    "description": "Logo de la empresa Isla",
+    "tags": [
+      "logo",
+      "Isla",
+      "undumentaria"
+    ],
+    "sourcePdf": "",
+    "page": null
+  }
+]

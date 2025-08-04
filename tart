@@ -1,0 +1,53 @@
+[33mcommit 9aecf77b3f928ded6765b6c586f5b44bc09530c9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Matias Cusimano <mati.cusimano@gmail.com>
+Date:   Fri Aug 1 21:04:15 2025 -0300
+
+    eliminamos el type
+
+[33mcommit 6e08c1e4cae528c99e39434789153b493ffa4ad2[m
+Author: Matias Cusimano <mati.cusimano@gmail.com>
+Date:   Fri Aug 1 21:00:37 2025 -0300
+
+    feat: list uploads by type in /archivos endpoint
+
+[33mcommit cd1430dbdbbea5d06c87fc00be3e90823d492dcc[m
+Author: Matias Cusimano <mati.cusimano@gmail.com>
+Date:   Fri Aug 1 20:39:52 2025 -0300
+
+    chore: expose uploads/images and block uploads/pdfs
+
+[33mcommit 6c45229f6a1a3340b25d43dc52e7d2911be830d6[m
+Author: Matias Cusimano <mati.cusimano@gmail.com>
+Date:   Fri Aug 1 20:32:09 2025 -0300
+
+    chore: add uploads/pdfs and uploads/images directories
+
+[33mcommit 29c4cdcd43928cd95dd4b5f2e173273289c1a46e[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: e1santo <115844165+e1santo@users.noreply.github.com>
+Date:   Fri Aug 1 18:37:55 2025 -0300
+
+    Create README.md
+
+[33mcommit 5c24f81360b6d2d164ab5a0c896bcbcffae89e8b[m
+Author: Matias Cusimano <mati.cusimano@gmail.com>
+Date:   Fri Aug 1 17:13:34 2025 +0000
+
+    Quitar .env del repo y agregar .gitignore y .env.example
+
+[33mcommit f9e0086b1220eb2337215991f482ca651a3342b6[m
+Author: Matias Cusimano <matias@srv931567.hstgr.cloud>
+Date:   Fri Aug 1 16:52:09 2025 +0000
+
+    Quitar node_modules del repo; se reconstruyen desde lockfile
+
+[33mcommit 613e27fd6e142f865132fe5c5b668a59f87efee2[m
+Author: Matias Cusimano <matias@srv931567.hstgr.cloud>
+Date:   Fri Aug 1 16:20:27 2025 +0000
+
+    Agregar ecosistema PM2 para pancho-api y pancho-chatbot
+
+[33mcommit 3ca34915d46ba614997ce56ddd640b909c311c14[m
+Author: Matias Cusimano <mati.cusimano@gmail.com>
+Date:   Fri Aug 1 12:54:29 2025 -0300
+
+    Inicial: mono-repo con pancho-api y pancho-chatbot

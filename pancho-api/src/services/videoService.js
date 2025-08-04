@@ -2,39 +2,30 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { dirname } from 'path'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname  = path.dirname(__filename)
+const __filename   = fileURLToPath(import.meta.url)
+const __dirname    = dirname(__filename)
 
-// Carpeta donde pancho-trainer guarda los enlaces de video
-const VIDEOS_DIR     = path.resolve(__dirname, '../../../pancho-trainer/uploads/videos')
-// Manifiesto destino
-const VIDEOS_MANIFEST = path.resolve(__dirname, '../manifests/videos.json')
+// Ruta al manifest de trainer (donde pancho-trainer guarda los videos)
+const TRAINER_MANIFEST = path.resolve(
+  __dirname,
+  '../../../pancho-trainer/src/manifests/videos.json'
+)
+// Ruta local en la API donde queremos copiar ese manifest
+const API_MANIFEST     = path.resolve(
+  __dirname,
+  '../manifests/videos.json'
+)
 
 export async function videoService() {
-  try {
-    const manifest = []
-    const files = await fs.readdir(VIDEOS_DIR)
-    console.log('🎬 videoService encontró:', files)
+  // 1) Lee el array de videos del trainer
+  const raw = await fs.readFile(TRAINER_MANIFEST, 'utf-8')
+  const arr = JSON.parse(raw || '[]')
 
-    for (const file of files) {
-      // Cada archivo lo trataremos como JSON con metadata
-      const data = JSON.parse(await fs.readFile(path.join(VIDEOS_DIR, file), 'utf-8'))
-      // Esperamos algo como { filename, title, description, tags, videos:[url,...] }
-      // Ajusta según tu esquema real
-      manifest.push({
-        id:          data.filename,
-        title:       data.title,
-        description: data.description,
-        tags:        data.tags || [],
-        urls:        data.videos  || []
-      })
-    }
+  // 2) (Opcional) aquí podrías validar que cada objeto tenga { url, title, description, tags }
 
-    await fs.writeFile(VIDEOS_MANIFEST, JSON.stringify(manifest, null, 2), 'utf-8')
-    console.log(`✅ videoService: generado ${manifest.length} videos en videos.json`)
-  } catch (err) {
-    console.error('❌ videoService error:', err)
-    throw err
-  }
+  // 3) Escribe ese mismo array en tu carpeta de manifests de la API
+  await fs.writeFile(API_MANIFEST, JSON.stringify(arr, null, 2), 'utf-8')
+  console.log(`✅ videoService: generado ${arr.length} videos en videos.json`)
 }

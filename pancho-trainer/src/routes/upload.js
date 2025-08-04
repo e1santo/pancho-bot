@@ -1,8 +1,8 @@
+// src/routes/upload.js
 import express from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs/promises'
-import { existsSync, mkdirSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
@@ -12,18 +12,10 @@ const router     = express.Router()
 
 // Manifests
 const manifest = {
-  pdfs:   path.join(__dirname, '../manifests/knowledge.json'),
-  images: path.join(__dirname, '../manifests/images.json'),
-  videos: path.join(__dirname, '../manifests/videos.json'),
-  excel:  path.join(__dirname, '../manifests/products.json')
-}
-
-// Subcarpetas para cada tipo
-const folders = {
-  pdfs:   'pdfs',
-  images: 'images',
-  videos: 'videos',
-  excel:  'excel'
+  pdfs:    path.join(__dirname, '../manifests/knowledge.json'),
+  images:  path.join(__dirname, '../manifests/images.json'),
+  videos:  path.join(__dirname, '../manifests/videos.json'),
+  excel:   path.join(__dirname, '../manifests/products.json')
 }
 
 // Multer storage
@@ -31,75 +23,50 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase()
     let sub = 'others'
-    if (ext === '.pdf') sub = folders.pdfs
-    else if (['.png','.jpg','.jpeg'].includes(ext)) sub = folders.images
-    else if (['.xlsx','.csv'].includes(ext)) sub = folders.excel
-
-    const dir = path.join(__dirname, '../../uploads', sub)
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-    cb(null, dir)
+    if (ext === '.pdf') sub = 'pdfs'
+    else if (['.png', '.jpg', '.jpeg'].includes(ext)) sub = 'images'
+    else if (['.xlsx', '.csv'].includes(ext)) sub = 'excel'
+    cb(null, path.join(__dirname, '../../uploads', sub))
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}_${file.originalname}`)
+    const name = `${Date.now()}_${file.originalname}`
+    cb(null, name)
   }
 })
 const upload = multer({ storage })
 
-// Campos que multer debe manejar
-const fields = upload.fields([
-  { name:'pdfs',   maxCount: 5 },
-  { name:'images', maxCount:20 },
-  { name:'excel',  maxCount: 1 },
+// Solo procesamos archivos para pdfs/images/excel
+const fieldsMiddleware = upload.fields([
+  { name: 'pdfs', maxCount: 5 },
+  { name: 'images', maxCount: 20 },
+  { name: 'excel', maxCount: 1 }
 ])
 
-router.post('/', fields, async (req, res) => {
+router.post('/', fieldsMiddleware, async (req, res) => {
   try {
-    // --- 1) Videos (solo metadata en req.body.videos) ---
+    // Normalizo req.files para evitar undefined
+    const files = req.files || {}
+
+    // 1) Videos (vienen en req.body.videos, no hay archivo físico)
     if (req.body.videos) {
-      // Asegurarse que exista carpeta de uploads/videos por prevención
-      const videosDir = path.join(__dirname, '../../uploads', folders.videos)
-      if (!existsSync(videosDir)) mkdirSync(videosDir, { recursive: true })
-
-      // Leer manifest actual
-      const vids = JSON.parse(
-        await fs.readFile(manifest.videos, 'utf-8')
-          .catch(() => '[]')
-      )
-
-      // Agregar URLs nuevas con su metadata
-      for (const url of req.body.videos
-        .split(',')
-        .map(u => u.trim())
-        .filter(Boolean)
-      ) {
+      const vids = JSON.parse(await fs.readFile(manifest.videos, 'utf-8') || '[]')
+      for (const url of req.body.videos.split(',').map(u => u.trim()).filter(Boolean)) {
         if (!vids.some(v => v.url === url)) {
           vids.push({
             url,
-            title:       req.body.title       || '',
+            title:       req.body.title || '',
             description: req.body.description || '',
-            tags:        (req.body.tags || '')
-                            .split(',')
-                            .map(t => t.trim())
-                            .filter(Boolean)
+            tags:        (req.body.tags || '').split(',').map(t => t.trim()).filter(Boolean)
           })
         }
       }
-
-      // Guardar manifest de videos
-      await fs.writeFile(
-        manifest.videos,
-        JSON.stringify(vids, null, 2),
-        'utf-8'
-      )
+      await fs.writeFile(manifest.videos, JSON.stringify(vids, null, 2), 'utf-8')
     }
 
-    // --- 2) PDFs ---
-    if (Array.isArray(req.files.pdfs)) {
-      const arr = JSON.parse(
-        await fs.readFile(manifest.pdfs, 'utf-8')
-          .catch(() => '[]')
-      )
-      for (const f of req.files.pdfs) {
+    // 2) PDFs
+    if (Array.isArray(files.pdfs)) {
+      const arr = JSON.parse(await fs.readFile(manifest.pdfs, 'utf-8') || '[]')
+      for (const f of files.pdfs) {
         if (!arr.some(x => x.source === f.filename)) {
           arr.push({ source: f.filename })
         }
@@ -107,22 +74,16 @@ router.post('/', fields, async (req, res) => {
       await fs.writeFile(manifest.pdfs, JSON.stringify(arr, null, 2), 'utf-8')
     }
 
-    // --- 3) Imágenes ---
-    if (Array.isArray(req.files.images)) {
-      const imgs = JSON.parse(
-        await fs.readFile(manifest.images, 'utf-8')
-          .catch(() => '[]')
-      )
-      for (const f of req.files.images) {
+    // 3) Imágenes
+    if (Array.isArray(files.images)) {
+      const imgs = JSON.parse(await fs.readFile(manifest.images, 'utf-8') || '[]')
+      for (const f of files.images) {
         if (!imgs.some(x => x.filename === f.filename)) {
           imgs.push({
             filename:    f.filename,
             title:       req.body.title       || '',
             description: req.body.description || '',
-            tags:        (req.body.tags || '')
-                            .split(',')
-                            .map(t => t.trim())
-                            .filter(Boolean),
+            tags:        (req.body.tags || '').split(',').map(t => t.trim()).filter(Boolean),
             sourcePdf:   '',
             page:        null
           })
@@ -131,13 +92,10 @@ router.post('/', fields, async (req, res) => {
       await fs.writeFile(manifest.images, JSON.stringify(imgs, null, 2), 'utf-8')
     }
 
-    // --- 4) Excel ---
-    if (Array.isArray(req.files.excel)) {
-      const ex = JSON.parse(
-        await fs.readFile(manifest.excel, 'utf-8')
-          .catch(() => '[]')
-      )
-      for (const f of req.files.excel) {
+    // 4) Excel/CSV
+    if (Array.isArray(files.excel)) {
+      const ex = JSON.parse(await fs.readFile(manifest.excel, 'utf-8') || '[]')
+      for (const f of files.excel) {
         if (!ex.some(x => x.filename === f.filename)) {
           ex.push({ filename: f.filename })
         }
@@ -145,13 +103,13 @@ router.post('/', fields, async (req, res) => {
       await fs.writeFile(manifest.excel, JSON.stringify(ex, null, 2), 'utf-8')
     }
 
-    // --- Redirigir de vuelta al home ---
+    // 5) Redirigir de vuelta al formulario para recargar lista
     res.redirect('/')
-  }
-  catch (err) {
+  } catch (err) {
     console.error('Error en /api/upload:', err)
     res.status(500).json({ error: 'Error procesando subida' })
   }
 })
 
 export default router
+

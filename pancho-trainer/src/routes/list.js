@@ -1,3 +1,4 @@
+// src/routes/list.js
 import express from 'express'
 import fs from 'fs/promises'
 import path from 'path'
@@ -8,49 +9,66 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname  = dirname(__filename)
 const router     = express.Router()
 
-// Mapear tipo a carpeta y manifest correspondiente
-const folders = { pdfs:'pdfs', images:'images', excel:'excel' }
+// Mapear tipo a manifest
 const manifests = {
-  pdfs: path.join(__dirname, '../manifests/knowledge.json'),
+  pdfs:   path.join(__dirname, '../manifests/knowledge.json'),
   images: path.join(__dirname, '../manifests/images.json'),
+  videos: path.join(__dirname, '../manifests/videos.json'),
   excel:  path.join(__dirname, '../manifests/products.json')
 }
 
-// Listar
+// GET /api/files/:type
+// Devuelve la lista de objetos del manifest con toda la metadata
 router.get('/:type', async (req, res) => {
   const type = req.params.type
-  const dir  = path.join(__dirname, '../../uploads', folders[type]||'')
+  const mpath = manifests[type]
+  if (!mpath) {
+    return res.status(404).json({ files: [] })
+  }
+
   try {
-    const files = await fs.readdir(dir)
-    res.json({ files })
-  } catch {
-    res.status(404).json({ files:[] })
+    const raw = await fs.readFile(mpath, 'utf-8')
+    const arr = JSON.parse(raw || '[]')
+    return res.json({ files: arr })
+  } catch (e) {
+    console.error(`Error leyendo manifest ${type}:`, e)
+    return res.status(500).json({ files: [] })
   }
 })
 
-// Borrar + sincronizar manifest
+// DELETE /api/files/:type/:filename
+// Elimina el fichero y sincroniza el manifest
 router.delete('/:type/:filename', async (req, res) => {
   const { type, filename } = req.params
-  const dir = path.join(__dirname, '../../uploads', folders[type]||'')
-  try {
-    // 1) eliminar fichero
-    await fs.unlink(path.join(dir, filename))
+  const uploadsDir = path.join(__dirname, '../../uploads', type)
 
-    // 2) actualizar JSON
+  try {
+    // 1) Eliminar fichero físico
+    await fs.unlink(path.join(uploadsDir, filename))
+
+    // 2) Actualizar manifest
     const mpath = manifests[type]
     if (mpath) {
-      const arr = JSON.parse(await fs.readFile(mpath, 'utf-8'))
-      const clean = arr.filter(item => {
-        if (type==='images') return item.filename !== filename
-        if (type==='pdfs')   return item.source   !== filename
-        if (type==='excel')  return item.id       !== filename
+      const raw = await fs.readFile(mpath, 'utf-8')
+      const arr = JSON.parse(raw || '[]')
+      const filtered = arr.filter(item => {
+        // Para imágenes
+        if (type === 'images') return item.filename !== filename
+        // Para PDFs
+        if (type === 'pdfs')   return item.source   !== filename
+        // Para videos
+        if (type === 'videos') return item.url      !== filename
+        // Para Excel/catalog
+        if (type === 'excel')  return item.filename !== filename
+        return true
       })
-      await fs.writeFile(mpath, JSON.stringify(clean, null, 2))
+      await fs.writeFile(mpath, JSON.stringify(filtered, null, 2))
     }
 
-    res.json({ deleted: filename })
+    return res.json({ deleted: filename })
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    console.error(`Error borrando ${type}/${filename}:`, e)
+    return res.status(500).json({ error: e.message })
   }
 })
 

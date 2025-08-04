@@ -18,6 +18,7 @@
     "express": "^5.1.0",
     "openai": "^5.11.0",
     "pdf-parse": "^1.1.1",
-    "pdfjs-dist": "^5.4.54"
+    "pdfjs-dist": "^5.4.54",
+    "xlsx": "^0.18.5"
   }
 }

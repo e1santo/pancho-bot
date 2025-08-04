@@ -1,4 +1,3 @@
-// src/routes/list.js
 import express from 'express'
 import fs from 'fs/promises'
 import path from 'path'
@@ -8,14 +7,14 @@ import { dirname } from 'path'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname  = dirname(__filename)
 const router     = express.Router()
-// Mapear carpetas
+
+// Mapear tipo a carpeta (trainer/uploads) y manifest correspondiente
 const folders = {
   pdfs:   'pdfs',
   images: 'images',
   videos: 'videos',
   excel:  'excel'
 }
-// Mapear tipo a manifest
 const manifests = {
   pdfs:   path.join(__dirname, '../manifests/knowledge.json'),
   images: path.join(__dirname, '../manifests/images.json'),
@@ -24,13 +23,11 @@ const manifests = {
 }
 
 // GET /api/files/:type
-// Devuelve la lista de objetos del manifest con toda la metadata
+// Devuelve el array completo de objetos según el manifest
 router.get('/:type', async (req, res) => {
   const type = req.params.type
   const mpath = manifests[type]
-  if (!mpath) {
-    return res.status(404).json({ files: [] })
-  }
+  if (!mpath) return res.status(404).json({ files: [] })
 
   try {
     const raw = await fs.readFile(mpath, 'utf-8')
@@ -42,44 +39,39 @@ router.get('/:type', async (req, res) => {
   }
 })
 
-// DELETE /api/files/:type/:filename
-// Elimina el fichero y sincroniza el manifest
-
-
-  // Borrar (y sincronizar manifest)
-router.delete('/:type/:filename', async (req, res) => {
-  const { type, filename } = req.params
-  const folder = folders[type] || ''
+// DELETE /api/files/:type/:index
+// Borra el elemento en la posición `index` del manifest (y el archivo físico si aplica)
+router.delete('/:type/:index', async (req, res) => {
+  const { type, index } = req.params
+  const idx = Number(index)
   const manifestPath = manifests[type]
+  if (!manifestPath) return res.status(404).json({ error: 'Tipo no válido' })
 
   try {
-    // 1) Si es video, NO borramos archivo físico, solo manifest
+    const arr = JSON.parse(await fs.readFile(manifestPath, 'utf-8') || '[]')
+
+    // Para videos solo actualizamos manifest
     if (type === 'videos') {
-      const arr = JSON.parse(await fs.readFile(manifestPath, 'utf-8') || '[]')
-      const clean = arr.filter(item => item.url !== filename)
-      await fs.writeFile(manifestPath, JSON.stringify(clean, null, 2), 'utf-8')
-      return res.json({ deleted: filename })
+      const removed = arr.splice(idx, 1)
+      await fs.writeFile(manifestPath, JSON.stringify(arr, null, 2), 'utf-8')
+      return res.json({ deleted: removed[0] })
     }
 
-    // 2) Para los demás tipos, borramos archivo físico…
-    const filePath = path.join(__dirname, '../../uploads', folder, filename)
-    await fs.unlink(filePath)
+    // Para los demás, además de manifest borramos el archivo
+    const folder = folders[type]
+    const fileEntry = arr[idx]
+    const filename = (type === 'pdfs') ? fileEntry.source : fileEntry.filename
 
-    // …y luego limpiamos el manifest correspondiente
-    if (manifestPath) {
-      const arr = JSON.parse(await fs.readFile(manifestPath, 'utf-8') || '[]')
-      const clean = arr.filter(item => {
-        if (type === 'images') return item.filename !== filename
-        if (type === 'pdfs')   return item.source   !== filename
-        if (type === 'excel')  return item.filename !== filename
-        return true
-      })
-      await fs.writeFile(manifestPath, JSON.stringify(clean, null, 2), 'utf-8')
-    }
+    // eliminar archivo físico
+    await fs.unlink(path.join(__dirname, '../../uploads', folder, filename))
+
+    // quitar del manifest
+    arr.splice(idx, 1)
+    await fs.writeFile(manifestPath, JSON.stringify(arr, null, 2), 'utf-8')
 
     return res.json({ deleted: filename })
   } catch (e) {
-    console.error(`Error borrando ${type}/${filename}:`, e)
+    console.error(`Error borrando ${type}/${index}:`, e)
     return res.status(500).json({ error: e.message })
   }
 })

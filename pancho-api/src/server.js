@@ -12,7 +12,15 @@ const app = express()
 const port = process.env.PORT || 3000
 
 // Middlewares
-app.use(cors())
+if (process.env.NODE_ENV === 'production') {
+  app.use(cors({
+    origin: ['https://www.maselectrourquiza.com']
+  }))
+} else {
+  app.use(cors({
+    origin: ['http://localhost:5173', 'https://www.maselectrourquiza.com']
+  }))
+}
 app.use(express.json())
 
 // Rutas

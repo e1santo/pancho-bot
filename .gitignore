@@ -1,4 +1,21 @@
-node_modules/
+cat > .gitignore << 'EOF'
+# Node modules
 **/node_modules/
+
+# PM2 dump
+.pm2/
+
+# Entornos
 .env
 *.log
+
+# Mac / Linux
+.DS_Store
+npm-debug.log*
+
+# Builds (si los tuvieras)
+dist/
+build/
+public/
+EOF
+

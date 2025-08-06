@@ -11,26 +11,36 @@ dotenv.config()
 const app = express()
 const port = process.env.PORT || 3000
 
-// Middlewares
-if (process.env.NODE_ENV === 'production') {
-  app.use(cors({
-    origin: ['https://www.maselectrourquiza.com']
-  }))
-} else {
-  app.use(cors({
-    origin: ['http://localhost:5173', 'https://www.maselectrourquiza.com']
-  }))
-}
+// 1) Middleware CORS: habilita peticiones desde tu frontend
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://www.maselectrourquiza.com']
+    : ['http://localhost:5173', 'https://www.maselectrourquiza.com'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204
+}))
+
+// 2) Body parser para JSON
 app.use(express.json())
 
-// Rutas
+// 3) Rutas de tu API
 import panchoRouter from './routes/pancho.js'
 import reindexRouter from './routes/reindex.js'
 
 app.use('/api/pancho', panchoRouter)
 app.use('/api/reindex', reindexRouter)
 
-// Arrancar servidor
+// 4) (Opcional) Servir tu frontend estático en producción
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(process.cwd(), 'public')))
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public', 'index.html'))
+  })
+}
+
+// 5) Arrancar servidor
 app.listen(port, () => {
   console.log(`🚀 Pancho API corriendo en http://localhost:${port}`)
 })
+

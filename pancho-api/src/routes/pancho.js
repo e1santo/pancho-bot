@@ -3,6 +3,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import { ChatOpenAI } from '@langchain/openai'
 import { queryEmbeddings } from '../utils/embeddings.js'
+import { systemPrompt } from '../../../pancho-chatbot/src/systemPrompt.js'
 
 dotenv.config()
 const router = express.Router()
@@ -15,11 +16,12 @@ const model = new ChatOpenAI({
 })
 
 // Prompt base
-const systemPrompt = `
-Actuás como *Pancho*, un electricista profesional argentino con más de 20 años de experiencia.
-`
+//const systemPrompt = [ ].join("\n")
+
+
 
 // POST /api/pancho
+
 router.post('/', async (req, res) => {
   const { message } = req.body
   if (!message) {

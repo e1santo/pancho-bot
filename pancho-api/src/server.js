@@ -4,7 +4,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import path from 'path'
-
+import fs from 'fs'
 // Carga variables de entorno desde .env
 dotenv.config()
 
@@ -33,11 +33,19 @@ app.use('/api/reindex', reindexRouter)
 
 // 4) (Opcional) Servir tu frontend estático en producción
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(process.cwd(), 'public')))
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'public', 'index.html'))
-  })
+  const publicPath = path.join(process.cwd(), 'public')
+  const indexFile  = path.join(publicPath, 'index.html')
+
+  if (fs.existsSync(indexFile)) {
+    app.use(express.static(publicPath))
+    app.get('*', (req, res) => {
+      res.sendFile(indexFile)
+    })
+  } else {
+    console.warn('⚠️  No encontré public/index.html — no sirvo estático.')
+  }
 }
+
 
 // 5) Arrancar servidor
 app.listen(port, () => {
